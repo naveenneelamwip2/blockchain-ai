@@ -52,7 +52,7 @@ export class ChromaService {
 
     const results = await this.queryCollection.query({
       queryTexts: queryTexts,
-      nResults: 1,
+      nResults: 4,
       // include: ["embeddings", "documents"]
     });
 

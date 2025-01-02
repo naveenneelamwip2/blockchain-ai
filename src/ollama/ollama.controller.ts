@@ -4,13 +4,28 @@ import { ChromaService } from '../chroma/chroma.service';
 import { MongoService } from 'src/mongo/mongo.service';
 import { range } from 'rxjs';
 
-@Controller('ollama')
+@Controller('')
 export class OllamaController {
   constructor(
     private readonly ollamaService: OllamaService,
     private readonly chromaService: ChromaService,
     private readonly mongoService: MongoService,
   ) { }
+
+  @Post('addDocument')
+  async createDocuments(@Body('input') input: string, @Body('id') id: string) {
+    await this.chromaService.addDocuments([input], [id]);
+    return { message: 'Documents are stored successfully' };
+  }
+
+  @Post('query')
+  async generateOutputUsingDocuments(@Body('input') input: string) {
+    const contextSearch = await this.chromaService.getContextualDocuments(input);
+    const keywordSearch = await this.chromaService.getKeywordDocuments(input);
+    let output = "output not generated on llama";
+    // output = await this.ollamaService.generateOutput(input, contextSearch);
+    return { message: 'Documents are retrieved successfully', output, sources: [...contextSearch.ids, ...keywordSearch.ids], contextSearch, keywordSearch };
+  }
 
   @Post('embeddings')
   async createEmbeddings(@Body('input') input: string, @Body('id') id: string) {
@@ -37,20 +52,6 @@ export class OllamaController {
     return { context, keywordBasedMongoDb, contextMongodb, hybridSearchMongodb };
   }
 
-  @Post('documents')
-  async createDocuments(@Body('input') input: string, @Body('id') id: string) {
-    await this.chromaService.addDocuments([input], [id]);
-    return { message: 'Documents are stored successfully' };
-  }
-
-  @Post('generateUsingDocuments')
-  async generateOutputUsingDocuments(@Body('input') input: string) {
-    const contextSearch = await this.chromaService.getContextualDocuments(input);
-    const keywordSearch = await this.chromaService.getKeywordDocuments(input);
-    const output = await this.ollamaService.generateOutput(input, contextSearch);
-    return {contextSearch, keywordSearch};
-  }
-
   @Post('resetDb')
   async resetDb() {
     const context = await this.chromaService.resetDb();
@@ -64,18 +65,18 @@ export class OllamaController {
     let chunks = await this.chunkText(text, 3000)
 
     console.log(chunks.length)
-    let documentIds=[];
+    let documentIds = [];
     let documents = [];
-    let i=1;
-    for(const chunk in chunks){
-      documentIds.push("chunk"+i++)
+    let i = 1;
+    for (const chunk in chunks) {
+      documentIds.push("chunk" + i++)
       documents.push(chunks[0])
     }
 
     await this.chromaService.addDocuments(documents, documentIds);
 
 
-    return ;
+    return;
   }
 
   async chunkText(text, size) {
